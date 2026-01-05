@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Memo → Markdown</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+    }
+    h1 {
+      color: #00d4ff;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      color: #888;
+      margin-bottom: 2rem;
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      padding: 1rem;
+      border: 2px solid #333;
+      border-radius: 8px;
+      background: #16213e;
+      color: #eee;
+      font-size: 1rem;
+      resize: vertical;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #00d4ff;
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    button:hover { transform: translateY(-2px); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-convert {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+    .btn-copy {
+      background: #00d4ff;
+      color: #1a1a2e;
+      margin-left: 0.5rem;
+    }
+    .output-section {
+      margin-top: 2rem;
+    }
+    .output-label {
+      color: #00d4ff;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+    .output {
+      background: #16213e;
+      border: 2px solid #333;
+      border-radius: 8px;
+      padding: 1rem;
+      white-space: pre-wrap;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.9rem;
+      min-height: 150px;
+    }
+    .loading {
+      display: inline-block;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #00d4ff;
+      color: #1a1a2e;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      font-weight: bold;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <h1>AI Memo → Markdown</h1>
+  <p class="subtitle">メモを入力すると、AIがMarkdown形式に変換します</p>
+
+  <textarea id="input" placeholder="ここにメモを入力...&#10;&#10;例:&#10;今日の会議メモ&#10;参加者は田中、鈴木、佐藤&#10;議題は新製品の発売日について&#10;結論として来月15日に決定"></textarea>
+
+  <div>
+    <button class="btn-convert" id="convertBtn" onclick="convert()">Markdownに変換</button>
+    <button class="btn-copy" id="copyBtn" onclick="copyToClipboard()" disabled>コピー</button>
+  </div>
+
+  <div class="output-section">
+    <div class="output-label">出力 (Markdown)</div>
+    <div class="output" id="output">ここに変換結果が表示されます</div>
+  </div>
+
+  <div class="toast" id="toast">コピーしました!</div>
+
+  <script>
+    let markdownResult = '';
+
+    async function convert() {
+      const input = document.getElementById('input').value.trim();
+      if (!input) return;
+
+      const btn = document.getElementById('convertBtn');
+      const output = document.getElementById('output');
+      const copyBtn = document.getElementById('copyBtn');
+
+      btn.disabled = true;
+      btn.textContent = '変換中...';
+      output.innerHTML = '<span class="loading">AIが処理中...</span>';
+      copyBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/memo-to-md', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ memo: input })
+        });
+
+        const data = await res.json();
+        markdownResult = data.markdown;
+        output.textContent = markdownResult;
+        copyBtn.disabled = false;
+      } catch (e) {
+        output.textContent = 'エラーが発生しました: ' + e.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Markdownに変換';
+      }
+    }
+
+    async function copyToClipboard() {
+      if (!markdownResult) return;
+
+      try {
+        await navigator.clipboard.writeText(markdownResult);
+        showToast();
+      } catch (e) {
+        alert('コピーに失敗しました');
+      }
+    }
+
+    function showToast() {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+  </script>
+</body>
+</html>
